@@ -2,9 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="favicon.png">
     <!-- <meta http-equiv="refresh" content="5"> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liman1</title>
+
+    <style>
+        .preview {
+            max-width: 640px;
+            max-height: 360px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .preview {
+                width: 83.333%;
+                margin: 0 auto; 
+            }
+        }
+
+        .img-preview {
+            width: auto;
+            height: auto;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .img-preview {
+                width: 83.333%;
+                margin: 0 auto; 
+            }
+        }
+    </style>
 </head>
 <body>
     <h1>Notas de Liman - <small><i style="font-size: 0.7em;">Última edición: 13 de noviembre de 2025</i></small></h1>
@@ -19,7 +50,7 @@
                 <a href="https://github.com/Limancio/limancio.github.io/tree/main/GameBasic">source code</a>
             </h4>
             <a href="GameBasic/gamebasic.mp4" target="_blank">
-                <img src="GameBasic/gamebasic.jpg" width="640" height="360" alt="GameBasic preview">
+                <img src="GameBasic/gamebasic.jpg" class="preview" alt="GameBasic preview">
             </a>
             <p>
                 Luego de dejar la carrera de 'Técnico Superior en Programación' me decidí a que quería hacer un juego.
@@ -46,7 +77,7 @@
                 <a href="https://github.com/Limancio/limancio.github.io/tree/main/SDL_Pong">source code</a>
             </h4>
             <a href="SDL_Pong/SDL_Pong.mp4" target="_blank">
-                <img src="SDL_Pong/SDL_Pong.jpg" width="640" height="360" alt="SDL_Pong preview">
+                <img src="SDL_Pong/SDL_Pong.jpg" class="preview" alt="SDL_Pong preview">
             </a>
             <p>
                 Tal como su nombre lo indica este 'juego' es el <a href="https://en.wikipedia.org/wiki/Pong">Pong</a>.
@@ -68,7 +99,7 @@
                 <a href="https://github.com/Limancio/limancio.github.io/tree/main/GameEngine-core">source code</a>
             </h4>
             <a href="GameEngine-core/GameEngine-core.mp4" target="_blank">
-                <img src="GameEngine-core/GameEngine-core.jpg" width="640" height="360" alt="GameEngine-core preview">
+                <img src="GameEngine-core/GameEngine-core.jpg" class="preview" alt="GameEngine-core preview">
             </a>
             <p>
                 Hay tantas cosas que podemos decir de este codigo. Ya su nombre es un completo error 'GameEngine-core', no llega a ser un Juego, mucho menos un Motor y está lejos de ser 'core'.
@@ -86,7 +117,7 @@
                 <a href="https://github.com/Limancio/limancio.github.io/tree/main/ExploreTogether">source code</a>
             </h4>
             <a href="ExploreTogether/exp.mp4" target="_blank">
-                <img src="ExploreTogether/exp.jpg" width="640" height="360" alt="ExploreTogether preview">
+                <img src="ExploreTogether/exp.jpg" class="preview" alt="ExploreTogether preview">
             </a>
             <p>
                 Este proyecto me convertió en quien soy hoy. Tubo muchos nombres; comenzó con 'ExploreTogether' porque queria hacer un juego online donde explorabas un mundo infinito.
@@ -126,7 +157,7 @@
         </li>
     </ul>
 
-    <img src="cronopio.jpg" alt="Una historia cronopiesca">
+    <img src="cronopio.jpg" class="img-preview" alt="Una historia cronopiesca">
     <!--
     <h3>Mis Maestros</h3>
     <ul>
