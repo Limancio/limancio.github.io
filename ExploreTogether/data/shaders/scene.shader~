@@ -1,0 +1,96 @@
+#version 330 core
+
+const int MAX_JOINTS  = 33;
+const int MAX_WEIGHTS = 3;
+
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 uv;
+layout (location = 3) in float material_id;
+// animation
+layout (location = 4) in vec3 joint_id;
+layout (location = 5) in vec3  weight;
+
+out vec3 v_position;
+out vec3 v_normal;
+out vec2 v_uv;
+out float v_material_id;
+
+uniform mat4 proj_matrix;
+uniform mat4 view_matrix;
+uniform mat4 model_matrix;
+
+uniform vec4 u_water_plane;
+
+// animation
+uniform mat4 joint_transform_array[MAX_JOINTS];
+uniform float is_animated = 0.0; // @temporary
+
+void main() {
+  vec4 vertex_position = vec4(position, 1.0);
+  vec4 vertex_normal   = vec4(normal, 0.0);
+  
+  vec4 final_local_pos = vec4(0.0);
+  vec4 final_normal    = vec4(0.0);
+
+  if(is_animated == 1.0) {
+    for(int i = 0; i < MAX_WEIGHTS; i++) {
+      int joint_index = int(joint_id[i] + 0.5);
+      mat4 joint_transform = joint_transform_array[joint_index];
+      vec4 pose_position   = joint_transform * vertex_position;
+      final_local_pos += pose_position * weight[i];
+
+      vec4 world_normal = joint_transform * vertex_normal;
+      final_normal = world_normal * weight[i];
+    }
+  } else {
+    final_local_pos = vertex_position;
+    final_normal    = vertex_normal;
+  }
+  final_local_pos.w = 1.0;
+
+  vec4 world_position = model_matrix * final_local_pos;
+  gl_Position = proj_matrix * view_matrix * world_position; // model_matrix * vec4(position, 1.0);
+  gl_ClipDistance[0] = dot(world_position, u_water_plane);
+
+  v_normal    = final_normal.xyz;
+  v_position  = world_position.xyz;
+  v_uv 	      = uv;
+  v_material_id = material_id;
+}
+
+#frag
+#version 330 core
+
+out vec4 frag_color;
+
+in vec3  v_position;
+in vec3  v_normal;
+in vec2  v_uv;
+in float v_material_id;
+
+struct material {
+  vec3 diffuse;
+  float texture_id;
+  
+  vec2 uv_offset;
+};
+
+uniform material  u_material_array[16];
+uniform sampler2D u_texture_array[16];
+
+void main() {
+  int material_index = int(v_material_id + 0.5);
+  material mat = u_material_array[material_index];
+
+  if(mat.texture_id >= 0) {
+    int texture_index = int(mat.texture_id + 0.5);
+    frag_color = texture(u_texture_array[texture_index], v_uv);
+  
+    if(frag_color.a < 0.25) {
+      discard;
+    }
+  } else {
+    frag_color = vec4(mat.diffuse, 1.0);
+  }
+}

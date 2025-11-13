@@ -1,0 +1,3 @@
+issues-to-fix:
+all the joints in the animations needs to have an animation to run.
+if the joints has similar name cause error

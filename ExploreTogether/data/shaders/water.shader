@@ -1,0 +1,138 @@
+#version 330 core
+
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 uv;
+
+out vec4 v_clip_space;
+out vec3 v_frag_to_camera_vector;
+out vec3 v_position;
+out vec3 v_normal;
+out vec2 v_uv;
+
+uniform mat4 proj_matrix;
+uniform mat4 view_matrix;
+uniform mat4 model_matrix;
+uniform vec3 u_camera_position;
+
+uniform float u_move_elapsed;
+uniform float u_wave_length;
+uniform float u_wave_amplitude;
+
+//
+// @incomplete @temporary
+//
+const float PI = 3.1415926535897932384626433832795;
+
+float generate_offset(float x, float z, float val1, float val2){
+  float wave_speed = u_move_elapsed * 5.0f;
+  float radiansX = ((mod(x+z*x*val1, u_wave_length) / u_wave_length) + wave_speed * mod(x * 0.8 + z, 1.5)) * 2.0 * PI;
+  float radiansZ = ((mod(val2 * (z*x +x*z), u_wave_length) / u_wave_length) + wave_speed * 2.0 * mod(x , 2.0) ) * 2.0 * PI;
+
+  float result = u_wave_amplitude * 0.5 * (sin(radiansZ) + cos(radiansX));
+  return(result);
+}
+
+vec3 apply_distortion(vec3 vertex){
+  float xDistortion = generate_offset(vertex.x, vertex.z, 0.2, 0.1);
+  float yDistortion = generate_offset(vertex.x, vertex.z, 0.1, 0.3);
+  float zDistortion = generate_offset(vertex.x, vertex.z, 0.15, 0.2);
+  return(vertex + vec3(xDistortion, yDistortion, zDistortion));
+}
+//
+//
+//
+
+void main() {
+  vec4 world_position = model_matrix * vec4(position, 1.0);
+  world_position.xyz = apply_distortion(world_position.xyz);
+  
+  v_frag_to_camera_vector = u_camera_position - world_position.xyz;
+  
+  v_clip_space = proj_matrix * view_matrix * world_position;
+  gl_Position = v_clip_space;
+  v_normal    = normal;
+  v_position  = world_position.xyz;
+  v_uv        = uv;
+}
+
+#frag
+#version 330 core
+
+struct ocean_data {
+  vec4  water_color;
+  float clearness;
+  float border_alpha_power;
+  float tile_bias;
+  float wave_strength;
+  float refractivity;
+
+  vec2 wave1_force_direction; // use dinamycs waves count??
+  vec2 wave2_force_direction;
+};
+
+out vec4 frag_color;
+
+in vec4 v_clip_space;
+in vec3 v_position;
+in vec3 v_normal;
+in vec2 v_uv;
+in vec3 v_frag_to_camera_vector;
+
+uniform sampler2D u_reflect_bitmap;
+uniform sampler2D u_refract_bitmap;
+uniform sampler2D u_dudv_bitmap;
+uniform sampler2D u_depth_bitmap;
+
+uniform ocean_data u_ocean;
+uniform float      u_move_elapsed;
+
+const float near = 0.1;   // @temporary
+const float far  = 600.0; // @temporary
+
+void main() {
+  vec2 normalize_device_coords = (v_clip_space.xy / v_clip_space.w) / 2.0 + 0.5;
+
+  vec2 refract_uv = vec2(normalize_device_coords.x,  normalize_device_coords.y);
+  vec2 reflect_uv = vec2(normalize_device_coords.x, -normalize_device_coords.y);
+
+  float depth = texture(u_depth_bitmap, refract_uv).r;
+  float floor_distance = 2.0 * near * far / (far + near - (2.0 * depth - 1.0) * (far - near));
+  
+  depth = gl_FragCoord.z;
+  float water_distance = 2.0 * near * far / (far + near - (2.0 * depth - 1.0) * (far - near));
+  
+  float water_depth = floor_distance - water_distance;
+  
+  vec2 tiled_uv = v_uv * u_ocean.tile_bias;
+  
+  vec2 wave1_uv_offset = vec2( tiled_uv.x + u_ocean.wave1_force_direction.x * u_move_elapsed, tiled_uv.y + u_ocean.wave1_force_direction.y * u_move_elapsed);
+  vec2 wave2_uv_offset = vec2( tiled_uv.x + u_ocean.wave2_force_direction.x * u_move_elapsed, tiled_uv.y + u_ocean.wave2_force_direction.y * u_move_elapsed);
+  vec2 distortion1 = texture(u_dudv_bitmap, wave1_uv_offset).rg * 2.0 - 1.0;
+  vec2 distortion2 = texture(u_dudv_bitmap, wave2_uv_offset).rg * 2.0 - 1.0;
+  distortion1 *= u_ocean.wave_strength;
+  distortion2 *= u_ocean.wave_strength;
+
+  vec2 final_distortion = (distortion1 + distortion2);
+  final_distortion *= clamp(water_depth, 0.0, 1.0);
+
+  refract_uv += final_distortion;
+  reflect_uv += final_distortion;
+
+  refract_uv = clamp(refract_uv, 0.001, 0.999);
+  reflect_uv.x = clamp(reflect_uv.x,  0.001,  0.999);
+  reflect_uv.y = clamp(reflect_uv.y, -0.999, -0.001);
+  
+  vec4 reflect_color = texture(u_reflect_bitmap, reflect_uv);
+  vec4 refract_color = texture(u_refract_bitmap, refract_uv);
+
+  vec3 view_vector = normalize(v_frag_to_camera_vector);
+  float refractive_factor = dot(view_vector, vec3(0.0, 1.0, 0.0));
+  refractive_factor = pow(refractive_factor, u_ocean.refractivity);
+  
+  frag_color = mix(reflect_color, refract_color, refractive_factor);
+  frag_color = mix(frag_color, u_ocean.water_color, u_ocean.clearness);
+  frag_color.a = clamp(water_depth * u_ocean.border_alpha_power, 0.0, 1.0);
+
+  //frag_color.rgb *= vec3(1.0 - clamp(water_depth / 5.0, 0.0, 1.0));
+}

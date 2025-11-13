@@ -1,0 +1,110 @@
+#version 330 core
+layout (location = 0) in vec3  position;
+layout (location = 1) in vec2  uv;
+layout (location = 2) in float texture;
+layout (location = 3) in vec4  color;
+layout (location = 4) in vec3  terrain;
+
+out vec4  v_color;
+out vec2  v_uv;
+out float v_texture;
+out vec3  v_terrain;
+out vec3  v_position;
+out vec4  v_shadow_coord;
+
+uniform mat4 proj_matrix;
+uniform mat4 view_matrix;
+uniform mat4 model_matrix;
+
+uniform mat4 depth_proj_matrix;
+uniform mat4 depth_view_matrix;
+uniform mat4 depth_model_matrix;
+
+void main() {	
+  gl_Position = proj_matrix * view_matrix * model_matrix * vec4(position, 1.0);
+  v_color     = color;
+  v_uv        = uv;
+  v_texture   = texture;
+  v_terrain   = terrain;
+  v_position  = (model_matrix * vec4(position, 1.0)).xyz;
+  v_shadow_coord = (depth_proj_matrix * depth_view_matrix * depth_model_matrix) * vec4(position, 1.0);
+}
+
+#frag
+#version 330 core
+
+out vec4 frag_color;
+
+in vec4  v_color;
+in vec2  v_uv;
+in float v_texture;
+in vec3  v_terrain;
+in vec3  v_position;
+in vec4  v_shadow_coord;
+
+uniform sampler2D textures[4];
+uniform sampler2D depth_texture;
+uniform vec3 remember_position;
+uniform float remember_radius;
+uniform float remember_active;
+
+float calculate_shadow(vec4 shadow_coord) {
+  vec3 proj_coords = shadow_coord.xyz / shadow_coord.w;
+  proj_coords = proj_coords * 0.5 + 0.5;
+  float closest_depth = texture(depth_texture, proj_coords.xy).r; 
+  float current_depth = proj_coords.z;
+    
+  float shadow    = 0.0;
+  vec2 texel_size = 1.0 / textureSize(depth_texture, 0);
+  float bias 	  = 0.005;
+  
+  for(int x = -1; x <= 1; x++) {
+    for(int y = -1; y <= 1; y++) {
+      float pcf_depth = texture(depth_texture, proj_coords.xy + vec2(x, y) * texel_size).r; 
+      shadow += current_depth - bias > pcf_depth ? 0.5 : 0.0;        
+    }    
+  }
+  shadow /= 9.0;
+  return shadow;
+}
+
+void main() {
+  vec3 blend_terrain = v_terrain;
+  float main_texture_blend = 1 - (blend_terrain.r + blend_terrain.g + blend_terrain.b);
+     
+  vec4 main_texture_color = texture(textures[0], v_uv) * main_texture_blend;
+  vec4 r_texture_color    = texture(textures[1], v_uv) * blend_terrain.r;
+  vec4 g_texture_color    = texture(textures[2], v_uv) * blend_terrain.g;
+  vec4 b_texture_color    = texture(textures[3], v_uv) * blend_terrain.b;
+  vec4 final_color = main_texture_color + r_texture_color + g_texture_color + b_texture_color;
+
+  float distance_to_sphere = distance(remember_position, v_position);
+  float max_radius = remember_radius;
+  float min_radius = remember_radius - 0.5;
+     
+  frag_color = v_color * final_color;
+  if(distance_to_sphere < min_radius) {
+    // ignore
+  } else if(distance_to_sphere < max_radius) {
+    float value = max_radius - distance_to_sphere;
+    float blend = mix(1.0, 0.0, value / (max_radius - min_radius));
+    float luminance = (frag_color.r * 0.35 + frag_color.g * 0.71 + frag_color.b * 0.12);
+    
+    frag_color = vec4(luminance + blend, luminance + blend, luminance + blend, frag_color.a);
+  }
+     
+  // testing shadow
+  float shadow = calculate_shadow(v_shadow_coord);
+  vec4 light = vec4(1.0 - shadow, 1.0 - shadow, 1.0 - shadow, 1.0);
+  frag_color = light * frag_color;
+     
+  if(remember_active == 1.0) {
+    if(distance_to_sphere > remember_radius) {
+      discard;
+    }
+  } else {
+    if(distance_to_sphere < remember_radius) {
+      discard;
+    }
+  }
+}

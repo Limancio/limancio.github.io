@@ -1,0 +1,46 @@
+#version 330 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec2 uv;
+layout (location = 2) in vec4 color;
+
+out vec2 v_uv;
+out vec4 v_color;
+
+uniform mat4 proj_matrix;
+
+void main() {	
+     gl_Position = proj_matrix * vec4(position.x, position.y, 0.0, 1.0);
+     v_uv        = uv;
+     v_color 	 = color;
+}
+
+#frag
+#version 330 core
+
+out vec4 frag_color;
+
+in vec2 v_uv;
+in vec4 v_color;
+
+uniform sampler2D u_bitmap;
+uniform float u_draw_type;
+
+void main() {
+  int draw_type = int(u_draw_type+0.5); 
+  if(draw_type == 1) { // draw font
+    float pixel = texture(u_bitmap, v_uv).r;
+    
+    if(pixel > 0.4) {
+      pixel = 1;
+    } else {
+      discard;
+    }
+    frag_color = vec4(pixel) * v_color;
+  } else if(draw_type == 2) { // draw texture
+    frag_color = texture(u_bitmap, v_uv); 
+  } else  if(draw_type == 3) { // draw color
+    frag_color = v_color;
+  }
+  
+  // frag_color = vec4(1.0); // = gl_FragCoord.z;
+}

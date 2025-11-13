@@ -1,0 +1,31 @@
+#pragma once
+
+#include <string>
+
+
+	class FileUtils {
+	public:
+		static std::string read_file(const char* filepath) {
+
+			FILE* file = fopen(filepath, "rt");
+			fseek(file, 0, SEEK_END);
+			unsigned long length = ftell(file);
+			char* data = new char[length + 1];
+			memset(data, 0, length + 1);
+			fseek(file, 0, SEEK_SET);
+			fread(data, /*sizeof(char)*/ 1, length, file);
+			fclose(file);
+
+			std::string result(data);
+			delete[] data;
+			return result;
+		}
+		static void RemoveQuotes(std::string& input)
+		{
+			size_t pos;
+			while ((pos = input.find('\"')) != std::string::npos)
+			{
+				input.erase(pos, 1);
+			}
+		}
+	};
