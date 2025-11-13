@@ -1,0 +1,5 @@
+tecla: WASD - moverse
+tecla: R    - reiniciar
+
+tecla: 1 - uno de cartón -> llave
+tecla: 2 - dos de cartón -> ??
