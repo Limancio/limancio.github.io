@@ -59,7 +59,6 @@ var G = {
 	jewel_colors: [
 		PS.COLOR_RED,
 		PS.COLOR_ORANGE,
-		PS.COLOR_YELLOW,
 		PS.COLOR_GREEN,
 		PS.COLOR_BLUE,
 		PS.COLOR_INDIGO,
@@ -330,6 +329,7 @@ PS.touch = function( x, y, data, options ) {
 
 	if(G.point_start != null && G.point_start.x == x && G.point_start.y == y) {
 		G.point_start = null;
+		PS.borderColor( x, y, PS.DEFAULT );
 		PS.border( x, y, PS.DEFAULT );
 		return;
 	}
@@ -337,12 +337,14 @@ PS.touch = function( x, y, data, options ) {
  	if ( data === 1 ) {
 		if (G.point_start == null) {
 			PS.audioPlay( "fx_click" );
+			PS.borderColor( x, y, PS.COLOR_YELLOW );
 			PS.border( x, y, 4 );
 			G.point_start = {x: x, y: y};
 		} 
 	} else if(data === 2 && G.point_start != null) {
 		if (G.selection_b == null) {
 			PS.audioPlay( "fx_click" );
+			PS.borderColor( x, y, PS.COLOR_YELLOW );
 			PS.border( x, y, 4 );
 			G.point_end = {x: x, y: y};
 		}
